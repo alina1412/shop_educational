@@ -50,3 +50,7 @@ isort:
 
 req:
 	poetry export -f requirements.txt --without-hashes --with dev --output ./service/requirements.txt
+
+format:
+	ruff format .
+	ruff check --fix

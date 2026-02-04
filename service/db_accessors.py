@@ -1,8 +1,9 @@
 import sqlalchemy as sa
+from sqlalchemy import delete, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from service.config import logger
-from service.db_setup.models import User
+from service.db_setup.models import Category, User
 
 
 class DbAccessor:
@@ -11,43 +12,59 @@ class DbAccessor:
 
 
 class UserAccessor(DbAccessor):
-
-    async def create_user(self, vals: dict) -> int | None:
-        try:
-            user = User(**vals)
-            self.session.add(user)
-            await self.session.flush()
-            await self.session.commit()
-            await self.session.refresh(user)
-        except sa.exc.IntegrityError as exc:
-            logger.error("Error adding user: ", exc_info=exc)
-            await self.session.rollback()
-            return None
-        logger.info("added user %s", user.id)
-        return user.id
-
     async def get_user_by_id(self, id_: int) -> User | None:
         return await self.session.get(User, id_)
 
+
+class CategoryAccessor(DbAccessor):
+    async def create_category(self, vals: dict) -> int | None:
+        try:
+            category = Category(**vals)
+            self.session.add(category)
+            await self.session.flush()
+            await self.session.commit()
+            await self.session.refresh(category)
+        except sa.exc.IntegrityError as exc:
+            logger.error("Error adding category: ", exc_info=exc)
+            await self.session.rollback()
+            return None
+        logger.info("added category %s", category.id)
+        return category.id
+
+    async def get_category_by_id(self, id_: int) -> Category | None:
+        return await self.session.get(Category, id_)
+        import sqlalchemy as sa
+
+        query = sa.select(Category)
+        result = await self.session.execute(query)
+        return result.scalars().all()
+        # engine = self.session
+        # async with engine.connect() as conn:
+        #     res = await conn.execute(text("SELECT 1"))
+        # q = select(Category).where(Category.id == 1)
+        # result = await self.session.execute(q)
+        # res = result.scalars().all()
+        return res
+
     def filter_edited_vals(self, edited_vals: dict) -> dict:
         PASWD_MIN_LEN = 3
-        user_edit_fields = ("username", "password")
+        category_edit_fields = ("categoryname", "password")
         not_empty_vals = {
             key: val
             for key, val in edited_vals.items()
             if val is not None
-            and key in user_edit_fields
+            and key in category_edit_fields
             and (len(val) >= PASWD_MIN_LEN if key == "password" else True)
         }
         return not_empty_vals
 
-    async def patch_user_by_id(
+    async def patch_category_by_id(
         self, id_: int, edited_vals: dict
-    ) -> User | None:
+    ) -> Category | None:
         new_vals = self.filter_edited_vals(edited_vals)
         if not new_vals:
             return None
-        query_result = await self.session.get(User, id_)
+        query_result = await self.session.get(Category, id_)
         if not query_result:
             return None
         try:
@@ -56,13 +73,13 @@ class UserAccessor(DbAccessor):
             await self.session.flush()
             await self.session.commit()
         except sa.exc.IntegrityError as exc:
-            logger.error("Error paching user: ", exc_info=exc)
+            logger.error("Error paching category: ", exc_info=exc)
             await self.session.rollback()
             return None
         return query_result
 
-    async def delete_user(self, id_: int) -> bool:
-        query = sa.delete(User).where(User.id == id_)
+    async def delete_category(self, id_: int) -> bool:
+        query = sa.delete(Category).where(Category.id == id_)
         result = await self.session.execute(query)
         await self.session.commit()
         return bool(result.rowcount)

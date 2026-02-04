@@ -1,8 +1,8 @@
-empty draft for FastApi
+Educational shop project (ongoing)
 
 ### setup
 - creating virtual environment, .env
-- `poetry install`
+- `uv install`
 
 - running using poetry and make: `make run`
 - http://localhost:8000/docs/

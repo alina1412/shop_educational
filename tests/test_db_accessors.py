@@ -1,14 +1,18 @@
 import logging
 
-from service.db_accessors import UserAccessor
+from service.db_accessors import CategoryAccessor
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
 async def test_db_create(db):
-    user_manager = UserAccessor(db)
-    result = await user_manager.create_user(
-        {"username": "a", "password": "123"}
-    )
-    logger.info(result)
+    try:
+        category_manager = CategoryAccessor(db)
+        result = await category_manager.create_category(
+            {"title": "a", "parent_id": None}
+        )
+        logger.info(result)
+    except Exception:
+        await db.rollback()
+        raise
