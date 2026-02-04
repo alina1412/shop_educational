@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from service.config import logger
 from service.db_accessors import CategoryAccessor
 from service.db_setup.db_settings import get_session
+from service.db_setup.models import Category
 
 api_router = APIRouter()
 
@@ -20,7 +21,6 @@ async def show_statistic(db: AsyncSession = Depends(get_session)):
 
     category_manager = CategoryAccessor(db)
     result = await category_manager.get_category_by_id(id_=1)
-
     logger.debug("statistic-order")
     return {"data": "Success"}
 
@@ -32,11 +32,16 @@ async def show_statistic(db: AsyncSession = Depends(get_session)):
         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Bad request"},
     },
 )
-async def add_to_order(
-    add_data=None, session: AsyncSession = Depends(get_session)
+async def add_to_order_cart(
+    order_id: int,
+    product_id: int,
+    quantity: int,
+    # session: AsyncSession = Depends(get_session)
 ):
     """Add to order cart some product"""
-
+    logger.debug(
+        f"order_id={order_id}, product_id={product_id}, quantity={quantity}"
+    )
     try:
         1 == 2
         # await add_some_data(session, {"id": 2})

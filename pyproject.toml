@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "alembic==1.14.0",
     "annotated-types==0.7.0",
-    "anyio==4.8.0",
+    "anyio>=4.8.0",
     "astroid==3.3.8",
     "async-timeout==5.0.1",
     "asyncpg>=0.31.0",
@@ -60,21 +60,7 @@ known_local_folder = []
 disallow_untyped_defs = true
 ignore_missing_imports = true
 
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "session"
-log_cli = 1
-log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
-addopts = [
-    "--strict-markers",
-    "--tb=short",
-    "-p", "no:warnings",
-    "--disable-warnings"
-]
-filterwarnings = [
-    "ignore::sqlalchemy.exc.SAWarning",
-    "ignore::RuntimeWarning"
-]
+
 
 [tool.ruff]
 line-length = 79

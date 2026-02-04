@@ -70,35 +70,45 @@ async def db(engine):
             await session.close()
 
 
-async def get_session_override():
-    engine = create_async_engine(url=TEST_DB_URL)
-
-    async_session = async_sessionmaker(
+async def override_get_session(engine) -> AsyncGenerator[AsyncSession, None]:
+    async with async_sessionmaker(
         engine,
         class_=AsyncSession,
         expire_on_commit=False,
-        autocommit=False,
-        autoflush=False,
-    )
-
-    async with async_session() as session:
+    )() as session:
         try:
             yield session
+        except Exception as exc:
+            await session.rollback()
+            raise exc
         finally:
             await session.close()
-
-    # Properly dispose of the engine after session is done
-    await engine.dispose()
+            if engine:
+                await engine.dispose()
 
 
 @pytest_asyncio.fixture(scope="session")
-async def client():
-    app.dependency_overrides[get_session] = get_session_override
+async def get_async_session(engine):
+    async for session in override_get_session(engine):
+        yield session
+
+
+@pytest_asyncio.fixture(scope="session")
+async def client(engine):
+    async def get_test_session():
+        async for session in override_get_session(engine):
+            return session
+
+    # app.dependency_overrides[get_session] = lambda: get_test_session(engine)
+    app.dependency_overrides[get_session] = get_test_session
 
     async with AsyncClient(
         transport=ASGITransport(app),
         base_url="http://test",
     ) as client:
         yield client
+
+    # with TestClient(app) as client:
+    #     yield client
 
     app.dependency_overrides.clear()
