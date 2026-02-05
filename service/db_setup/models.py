@@ -1,7 +1,16 @@
 import datetime
+from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.orm import (
     Mapped,
     declarative_base,
@@ -41,7 +50,7 @@ class Product(Base):
     __tablename__ = "product"
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(50), nullable=False)
-    price: Mapped[str] = mapped_column(Integer(), nullable=False)
+    price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     category_id: Mapped[int] = mapped_column(
         ForeignKey("category.id", ondelete="RESTRICT"), nullable=False
     )
@@ -60,8 +69,7 @@ class Order(Base):
     __tablename__ = "order"
     id: Mapped[int] = mapped_column(primary_key=True)
     client_id: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
+        ForeignKey("client.id", ondelete="RESTRICT"), nullable=False
     )
     date: Mapped[datetime.datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.now()

@@ -4,23 +4,41 @@ from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
+import sqlalchemy
+from alembic.command import downgrade, upgrade
+from alembic.config import Config
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import (
-    AsyncSession,
     AsyncEngine,
+    AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 
+from service.__main__ import app
+from service.db_setup.db_settings import get_session
+from service.db_setup.models import Category, Client, Order, Product
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
-from service.__main__ import app
-from service.db_setup.db_settings import get_session
-
 TEST_DB_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/test_db"
+
+
+@pytest.fixture(scope="session")
+def apply_migrations():
+    alembic_cfg = Config("alembic.ini")
+
+    # Clean downgrade to base
+    downgrade(alembic_cfg, "base")
+
+    # Apply all migrations
+    upgrade(alembic_cfg, "head")
+
+    yield
+    # Optional: cleanup after tests
+    # downgrade(alembic_cfg, "base")
 
 
 # @pytest.fixture(scope="session", autouse=True)
@@ -82,3 +100,35 @@ async def client(engine):
     #     yield client
 
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture(scope="session")
+async def prepare_product_and_order(
+    apply_migrations, get_async_session
+) -> None:
+    session = get_async_session
+    # User.objects.create(id=1, username="testuser", password="testpass")
+    # try:
+    client = Client(
+        id=1,
+        name="Test Client",
+        email="test@example.com",
+        address="Test Address",
+    )
+    category = Category(id=1, title="Test Category 1")
+    # session.add(user)
+    session.add_all([category, client])
+    await session.flush()
+
+    # Category.objects.create(id=1, title="Test Category 1")
+    # Order.objects.create(id=1, user_id=1)
+    # Product.objects.create(title="Test Product 1", price=10.0, category_id=1)
+    order = Order(id=1, client_id=1)
+    product = Product(id=2, title="Test Product 1", price=10.0, category_id=1)
+    session.add_all([order, product])
+    await session.flush()
+
+    await session.commit()
+
+    # except sqlalchemy.exc.IntegrityError:
+    #     await session.rollback()

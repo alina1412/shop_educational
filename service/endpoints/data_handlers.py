@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from service.config import logger
-from service.db_accessors import CategoryAccessor
+from service.db_accessors import CategoryAccessor, OrderProductAccessor
 from service.db_setup.db_settings import get_session
-from service.db_setup.models import Category
 
 api_router = APIRouter()
 
@@ -36,17 +35,16 @@ async def add_to_order_cart(
     order_id: int,
     product_id: int,
     quantity: int,
-    # session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
 ):
     """Add to order cart some product"""
     logger.debug(
         f"order_id={order_id}, product_id={product_id}, quantity={quantity}"
     )
-    try:
-        1 == 2
-        # await add_some_data(session, {"id": 2})
-    except Exception as exc:
-        logger.debug("NOT_FOUND")
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "NOT_FOUND") from exc
+
+    order_product_accessor = OrderProductAccessor(session)
+    await order_product_accessor.add_product_to_order(
+        order_id, product_id, quantity
+    )
 
     return {"data": "Success"}

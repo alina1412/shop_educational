@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from service.config import logger
 from service.db_setup.models import Category, User
+from service.exceptions import OrderNotFound, ProductNotFound
 
 
 class DbAccessor:
@@ -83,3 +84,21 @@ class CategoryAccessor(DbAccessor):
         result = await self.session.execute(query)
         await self.session.commit()
         return bool(result.rowcount)
+
+
+class OrderProductAccessor(DbAccessor):
+    async def check_if_product_available(
+        self, product_id: int, quantity: int
+    ) -> bool:
+        return product_id != 9999
+
+    async def check_if_order_exists(self, order_id: int) -> bool:
+        return order_id != 9999
+
+    async def add_product_to_order(
+        self, order_id: int, product_id: int, quantity: int
+    ) -> None:
+        if not await self.check_if_order_exists(order_id):
+            raise OrderNotFound()
+        if not await self.check_if_product_available(product_id, quantity):
+            raise ProductNotFound()
