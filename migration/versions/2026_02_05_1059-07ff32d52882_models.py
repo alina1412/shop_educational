@@ -23,7 +23,7 @@ def upgrade() -> None:
     op.create_table('category',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('title', sa.Text(), nullable=False),
-    sa.Column('parent_id', sa.Integer(), server_default='1', nullable=True),
+    sa.Column('parent_id', sa.Integer(), server_default=None, nullable=True),
     sa.ForeignKeyConstraint(['parent_id'], ['category.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -67,7 +67,6 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['product_id'], ['product.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    # ### end Alembic commands ###
 
 
 def downgrade() -> None:

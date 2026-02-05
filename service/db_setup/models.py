@@ -24,7 +24,9 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "user"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(
+        primary_key=True, autoincrement=True, index=True
+    )
     username: Mapped[str] = mapped_column(
         String(255), unique=True, nullable=False
     )
@@ -37,18 +39,22 @@ class User(Base):
 class Category(Base):
     __tablename__ = "category"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(
+        primary_key=True, autoincrement=True, index=True
+    )
     title: Mapped[str] = mapped_column(Text(), nullable=False)
     parent_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("category.id", ondelete="SET NULL"),
         nullable=True,
-        server_default="1",
+        server_default="null",
     )
 
 
 class Product(Base):
     __tablename__ = "product"
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(
+        primary_key=True, autoincrement=True, index=True
+    )
     title: Mapped[str] = mapped_column(String(50), nullable=False)
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     category_id: Mapped[int] = mapped_column(
@@ -59,7 +65,9 @@ class Product(Base):
 class Client(Base):
     __tablename__ = "client"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(
+        primary_key=True, autoincrement=True, index=True
+    )
     name: Mapped[str] = mapped_column(String(40), nullable=False)
     email: Mapped[str] = mapped_column(String(30), nullable=False)
     address: Mapped[str] = mapped_column(String(120), nullable=True)
@@ -67,7 +75,9 @@ class Client(Base):
 
 class Order(Base):
     __tablename__ = "order"
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(
+        primary_key=True, autoincrement=True, index=True
+    )
     client_id: Mapped[int] = mapped_column(
         ForeignKey("client.id", ondelete="RESTRICT"), nullable=False
     )
@@ -78,7 +88,9 @@ class Order(Base):
 
 class OrderItem(Base):
     __tablename__ = "order_item"
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(
+        primary_key=True, autoincrement=True, index=True
+    )
     order_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("order.id", ondelete="CASCADE"), nullable=False
     )

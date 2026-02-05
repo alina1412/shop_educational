@@ -74,10 +74,21 @@ async def override_get_session(engine) -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest_asyncio.fixture(scope="session")
-async def get_async_session(engine) -> AsyncSession | None:
-
-    async for session in override_get_session(engine):
-        return session  # returns one
+async def get_async_session() -> AsyncSession | None:
+    engine = create_async_engine(
+        TEST_DB_URL,
+        echo=False,
+        poolclass=None,
+    )
+    session_maker = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+    async with session_maker() as session:
+        return session
+    # async for session in override_get_session(engine):
+    #     return session  # returns one
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -115,7 +126,7 @@ async def prepare_product_and_order(
         email="test@example.com",
         address="Test Address",
     )
-    category = Category(id=1, title="Test Category 1")
+    category = Category(title="Test Category 1")
     # session.add(user)
     session.add_all([category, client])
     await session.flush()
@@ -123,9 +134,9 @@ async def prepare_product_and_order(
     # Category.objects.create(id=1, title="Test Category 1")
     # Order.objects.create(id=1, user_id=1)
     # Product.objects.create(title="Test Product 1", price=10.0, category_id=1)
-    order = Order(id=1, client_id=1)
-    product = Product(id=2, title="Test Product 1", price=10.0, category_id=1)
-    session.add_all([order, product])
+    order = Order(client_id=1)
+    product = Product(title="Test Product 1", price=10.0, category_id=1)
+    session.add_all([product, order])
     await session.flush()
 
     await session.commit()

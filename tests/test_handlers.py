@@ -12,10 +12,10 @@ async def test_statistic_handler(client):
     assert response.status_code == 200
 
 
-async def test_add_order_handler(client):
+async def test_add_order_handler(prepare_product_and_order, client):
     url = "/add-to-cart"
     order_id = 1
-    product_id = 2
+    product_id = 1
     quantity = 3
     response = await client.post(
         url
