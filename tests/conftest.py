@@ -50,20 +50,12 @@ def apply_migrations():
 #     loop.close()
 
 
-@pytest_asyncio.fixture(scope="session")
-async def engine() -> AsyncGenerator[AsyncEngine, None]:
+async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
     engine = create_async_engine(
         TEST_DB_URL,
         echo=False,
         poolclass=None,
     )
-
-    yield engine
-
-    await engine.dispose()
-
-
-async def override_get_session(engine) -> AsyncGenerator[AsyncSession, None]:
     session_maker = async_sessionmaker(
         engine,
         class_=AsyncSession,
@@ -71,6 +63,8 @@ async def override_get_session(engine) -> AsyncGenerator[AsyncSession, None]:
     )
     async with session_maker() as session:
         yield session
+
+    await engine.dispose()
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -92,10 +86,10 @@ async def get_async_session() -> AsyncSession | None:
 
 
 @pytest_asyncio.fixture(scope="session")
-async def client(engine):
+async def client():
 
     async def get_test_session():
-        async for session in override_get_session(engine):
+        async for session in override_get_session():
             return session
 
     # app.dependency_overrides[get_session] = lambda: get_test_session(engine)
@@ -135,7 +129,9 @@ async def prepare_product_and_order(
     # Order.objects.create(id=1, user_id=1)
     # Product.objects.create(title="Test Product 1", price=10.0, category_id=1)
     order = Order(client_id=1)
-    product = Product(title="Test Product 1", price=10.0, category_id=1)
+    product = Product(
+        title="Test Product 1", price=10.0, category_id=1, quantity=2
+    )
     session.add_all([product, order])
     await session.flush()
 
