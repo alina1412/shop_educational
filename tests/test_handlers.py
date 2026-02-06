@@ -122,3 +122,18 @@ async def test_add_to_cart_order_not_found(client):
         f"/add-to-cart?order_id={NOT_EXISTING_ORDER_ID}&product_id={product_id}&quantity={quantity}"
     )
     assert response.status_code == 404
+
+
+async def test_count_subcategories_handler(prepare_subcategories, client):
+    response = await client.get("/count-subcategories")
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data == [
+        {"title": "Electronics", "subcategories_count": 2},
+        {"title": "Smartphones", "subcategories_count": 2},
+        {"title": "Laptops", "subcategories_count": 1},
+        {"title": "Android Phones", "subcategories_count": 0},
+        {"title": "iPhones", "subcategories_count": 0},
+        {"title": "Gaming Laptops", "subcategories_count": 0},
+    ]

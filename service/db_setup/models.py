@@ -49,6 +49,8 @@ class Category(Base):
         nullable=True,
         server_default="null",
     )
+    # children = relationship("Category", back_populates="parent", foreign_keys=[parent_id])
+    # parent = relationship("Category", back_populates="children", remote_side=[id])
 
 
 class Product(Base):

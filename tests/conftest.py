@@ -139,3 +139,28 @@ async def prepare_product_and_order(
 
     # except sqlalchemy.exc.IntegrityError:
     #     await session.rollback()
+
+
+@pytest_asyncio.fixture(scope="session")
+async def prepare_subcategories(apply_migrations, get_async_session) -> None:
+    session = get_async_session
+
+    category0 = Category(title="Electronics")
+
+    session.add(category0)
+    await session.flush()
+    category_0_id = category0.id
+
+    category1 = Category(title="Smartphones", parent_id=category_0_id)
+    category2 = Category(title="Laptops", parent_id=category_0_id)
+    session.add_all([category1, category2])
+    await session.flush()
+    category_1_id = category1.id
+    category_2_id = category2.id
+
+    category3 = Category(title="Android Phones", parent_id=category_1_id)
+    category4 = Category(title="iPhones", parent_id=category_1_id)
+    category5 = Category(title="Gaming Laptops", parent_id=category_2_id)
+
+    session.add_all([category3, category4, category5])
+    await session.commit()

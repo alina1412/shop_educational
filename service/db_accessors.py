@@ -3,13 +3,21 @@ from typing import Optional
 
 import pytz
 import sqlalchemy as sa
-from sqlalchemy import delete, func, or_, select, text, update
+from sqlalchemy import CTE, delete, func, join, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from service.config import logger
-from service.db_setup.models import Category, Order, OrderItem, Product, User
+from service.db_setup.models import (
+    Category,
+    Client,
+    Order,
+    OrderItem,
+    Product,
+    User,
+)
 from service.exceptions import (
     OrderNotFound,
     ProductNotAvailable,
@@ -175,3 +183,75 @@ class OrderProductAccessor(DbAccessor):
         )
 
         await self.session.execute(stmt)
+
+
+class StatisticAccessor(DbAccessor):
+    async def get_client_orders_sum(self):
+        query = (
+            select(
+                Client.name,
+                func.coalesce(
+                    func.sum(OrderItem.quantity * OrderItem.price_at_time), 0
+                ).label("total_sum"),
+            )
+            .join(
+                Order, Client.id == Order.client_id
+            )  # INNER JOIN - only clients with orders
+            .outerjoin(
+                OrderItem, Order.id == OrderItem.order_id
+            )  # LEFT JOIN - orders may have no items
+            .group_by(Client.id, Client.name)
+        )
+        result = await self.session.execute(query)
+        return result.all()
+
+    async def get_count_subcategories(self):
+        subcategories = aliased(Category)
+
+        query = (
+            select(
+                Category.title,
+                func.count(subcategories.id).label("subcategories_count"),
+            )
+            .outerjoin(subcategories, subcategories.parent_id == Category.id)
+            .group_by(Category.id, Category.title)
+            .order_by(Category.id)
+        )
+        result = await self.session.execute(query)
+        return result.mappings().all()
+
+    async def get_top_selling_products(self):
+        cte = (
+            select(
+                Category.id.label("category_id"),
+                Category.title,
+                Category.parent_id,
+            )
+            .where(Category.parent_id.is_(None))
+            .cte(name="category_tree", recursive=True)
+        )
+
+        recursive_part = select(
+            Category.id, Category.title, Category.parent_id
+        ).join(cte, Category.parent_id == cte.c.category_id)
+
+        cte = cte.union_all(recursive_part)
+
+        parent = aliased(Category, name="parent")
+
+        main_query = (
+            select(
+                Product.title.label("product_title"),
+                parent.title.label("category_title"),
+                func.sum(OrderItem.quantity).label("total_quantity"),
+            )
+            .join(Product, OrderItem.product_id == Product.id)
+            .join(Category, Product.category_id == Category.id)
+            .join(cte, Category.id == cte.c.category_id)
+            .join(parent, cte.c.parent_id == parent.id)
+            .group_by(Product.title, parent.title)
+            .order_by(func.sum(OrderItem.quantity).desc())
+        )
+
+        result = (await self.session.execute(main_query)).fetchall()
+        return result
