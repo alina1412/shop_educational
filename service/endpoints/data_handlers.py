@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, status
+from fastapi.params import Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from service.config import logger
@@ -32,9 +33,9 @@ async def show_statistic(db: AsyncSession = Depends(get_session)):
     },
 )
 async def add_to_order_cart(
-    order_id: int,
-    product_id: int,
-    quantity: int,
+    order_id: int = Query(..., gt=0),
+    product_id: int = Query(..., gt=0),
+    quantity: int = Query(..., gt=0),
     session: AsyncSession = Depends(get_session),
 ):
     """Add to order cart some product"""

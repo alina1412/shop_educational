@@ -9,6 +9,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import (
@@ -60,6 +61,7 @@ class Product(Base):
     category_id: Mapped[int] = mapped_column(
         ForeignKey("category.id", ondelete="RESTRICT"), nullable=False
     )
+    quantity: Mapped[int] = mapped_column(Integer, server_default="0")
 
 
 class Client(Base):
@@ -102,3 +104,6 @@ class OrderItem(Base):
 
     # order = relationship("Order", back_populates="items")
     # product = relationship("Product", back_populates="order_items")
+    __table_args__ = (
+        UniqueConstraint("order_id", "product_id", name="uq_order_product"),
+    )

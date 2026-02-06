@@ -4,3 +4,7 @@ class ProductNotFound(Exception):
 
 class OrderNotFound(Exception):
     pass
+
+
+class ProductNotAvailable(Exception):
+    pass
