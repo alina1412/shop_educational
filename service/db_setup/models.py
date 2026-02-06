@@ -84,7 +84,7 @@ class Order(Base):
         ForeignKey("client.id", ondelete="RESTRICT"), nullable=False
     )
     date: Mapped[datetime.datetime] = mapped_column(
-        DateTime, nullable=False, server_default=func.now()
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
 

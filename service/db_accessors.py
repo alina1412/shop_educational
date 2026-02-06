@@ -1,5 +1,7 @@
+from datetime import datetime
 from typing import Optional
 
+import pytz
 import sqlalchemy as sa
 from sqlalchemy import delete, func, or_, select, text, update
 from sqlalchemy.dialects.postgresql import insert
@@ -18,6 +20,7 @@ from service.exceptions import (
 class DbAccessor:
     def __init__(self, session: AsyncSession):
         self.session = session
+        self.local_tz = pytz.timezone("UTC")
 
 
 class UserAccessor(DbAccessor):
@@ -114,6 +117,8 @@ class OrderProductAccessor(DbAccessor):
             order = await self._get_order_with_lock(order_id, current_session)
             if not order:
                 raise OrderNotFound(f"Order {order_id} not found")
+
+            order.date = datetime.now(self.local_tz)
 
             product = await self._get_product_with_lock(
                 product_id, current_session
