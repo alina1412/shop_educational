@@ -62,11 +62,12 @@ async def show_statistic(db: AsyncSession = Depends(get_session)):
     """
 
     result = await StatisticAccessor(db).get_top_selling_products()
+
     return [
         TopProducts(
-            product_name=row[0],
-            category_name=row[1],
-            total_quantity=row[2],
+            product_name=row.product_title,
+            category_name=row.category_top_title or row.category_title,
+            total_quantity=row.total_quantity,
         )
         for row in result
     ]

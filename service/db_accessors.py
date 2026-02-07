@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 import pytz
@@ -242,15 +242,23 @@ class StatisticAccessor(DbAccessor):
         main_query = (
             select(
                 Product.title.label("product_title"),
-                parent.title.label("category_title"),
+                parent.title.label("category_top_title"),
+                Category.title.label("category_title"),
                 func.sum(OrderItem.quantity).label("total_quantity"),
             )
             .join(Product, OrderItem.product_id == Product.id)
             .join(Category, Product.category_id == Category.id)
             .join(cte, Category.id == cte.c.category_id)
-            .join(parent, cte.c.parent_id == parent.id)
-            .group_by(Product.title, parent.title)
+            .outerjoin(
+                parent, cte.c.parent_id == parent.id
+            )  # even if no parent
+            .join(Order, OrderItem.order_id == Order.id)
+            .where(
+                Order.date >= datetime.now(self.local_tz) - timedelta(days=30)
+            )
+            .group_by(Product.title, parent.title, Category.title)
             .order_by(func.sum(OrderItem.quantity).desc())
+            .limit(5)
         )
 
         result = (await self.session.execute(main_query)).fetchall()

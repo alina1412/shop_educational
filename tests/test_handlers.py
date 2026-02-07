@@ -137,3 +137,21 @@ async def test_count_subcategories_handler(prepare_subcategories, client):
         {"title": "iPhones", "subcategories_count": 0},
         {"title": "Gaming Laptops", "subcategories_count": 0},
     ]
+
+
+async def test_statistics_handler(prepare_orders_for_statistic, client):
+    response = await client.get("/statistic-order")
+    assert response.status_code == 200
+    data = response.json()
+    assert data == [
+        {
+            "product_name": "BookA",
+            "category_name": "Books",
+            "total_quantity": 3,
+        },
+        {
+            "product_name": "SmartphoneX",
+            "category_name": "Electronics",
+            "total_quantity": 2,
+        },
+    ]

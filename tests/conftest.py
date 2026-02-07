@@ -1,5 +1,6 @@
 import asyncio
 import warnings
+from datetime import datetime
 from typing import AsyncGenerator
 
 import pytest
@@ -18,7 +19,7 @@ from sqlalchemy.ext.asyncio import (
 
 from service.__main__ import app
 from service.db_setup.db_settings import get_session
-from service.db_setup.models import Category, Client, Order, Product
+from service.db_setup.models import Category, Client, Order, OrderItem, Product
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -112,8 +113,7 @@ async def prepare_product_and_order(
     apply_migrations, get_async_session
 ) -> None:
     session = get_async_session
-    # User.objects.create(id=1, username="testuser", password="testpass")
-    # try:
+
     client = Client(
         id=1,
         name="Test Client",
@@ -121,13 +121,10 @@ async def prepare_product_and_order(
         address="Test Address",
     )
     category = Category(title="Test Category 1")
-    # session.add(user)
+
     session.add_all([category, client])
     await session.flush()
 
-    # Category.objects.create(id=1, title="Test Category 1")
-    # Order.objects.create(id=1, user_id=1)
-    # Product.objects.create(title="Test Product 1", price=10.0, category_id=1)
     order = Order(client_id=1)
     product = Product(
         title="Test Product 1", price=10.0, category_id=1, quantity=2
@@ -136,9 +133,6 @@ async def prepare_product_and_order(
     await session.flush()
 
     await session.commit()
-
-    # except sqlalchemy.exc.IntegrityError:
-    #     await session.rollback()
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -163,4 +157,61 @@ async def prepare_subcategories(apply_migrations, get_async_session) -> None:
     category5 = Category(title="Gaming Laptops", parent_id=category_2_id)
 
     session.add_all([category3, category4, category5])
+    await session.commit()
+
+
+@pytest_asyncio.fixture(scope="session")
+async def prepare_orders_for_statistic(
+    apply_migrations, prepare_subcategories, get_async_session
+) -> None:
+    session = get_async_session
+
+    client = Client(
+        name="Test Client",
+        email="test@example.com",
+        address="Test Address",
+    )
+
+    smatrphone_category_id = (
+        await session.execute(
+            sqlalchemy.select(Category.id).where(
+                Category.title == "Smartphones"
+            )
+        )
+    ).scalar_one()
+
+    category0 = Category(title="Books")
+    session.add(category0)
+    await session.flush()
+    category_books_id = category0.id
+
+    session.add_all([client])
+    await session.flush()
+
+    order = Order(client_id=client.id, date=datetime.now())
+    product1 = Product(
+        title="SmartphoneX",
+        price=10.0,
+        category_id=smatrphone_category_id,
+        quantity=5,
+    )
+    product2 = Product(
+        title="BookA", price=5.0, category_id=category_books_id, quantity=5
+    )
+    session.add_all([product1, product2, order])
+    await session.flush()
+
+    order_item1 = OrderItem(
+        order_id=order.id,
+        product_id=product1.id,
+        quantity=2,
+        price_at_time=10.0,
+    )
+    order_item2 = OrderItem(
+        order_id=order.id,
+        product_id=product2.id,
+        quantity=3,
+        price_at_time=5.0,
+    )
+    session.add_all([order_item1, order_item2])
     await session.commit()
