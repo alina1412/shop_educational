@@ -87,6 +87,21 @@ async def get_async_session() -> AsyncSession | None:
 
 
 @pytest_asyncio.fixture(scope="session")
+async def get_async_session_maker() -> async_sessionmaker[AsyncSession] | None:
+    engine = create_async_engine(
+        TEST_DB_URL,
+        echo=False,
+        poolclass=None,
+    )
+    session_maker = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+    return session_maker
+
+
+@pytest_asyncio.fixture(scope="session")
 async def client():
 
     async def get_test_session():
@@ -110,29 +125,28 @@ async def client():
 
 @pytest_asyncio.fixture(scope="session")
 async def prepare_product_and_order(
-    apply_migrations, get_async_session
+    apply_migrations, get_async_session_maker
 ) -> None:
-    session = get_async_session
+    async with get_async_session_maker() as session:
+        client = Client(
+            id=1,
+            name="Test Client",
+            email="test@example.com",
+            address="Test Address",
+        )
+        category = Category(title="Test Category 1")
 
-    client = Client(
-        id=1,
-        name="Test Client",
-        email="test@example.com",
-        address="Test Address",
-    )
-    category = Category(title="Test Category 1")
+        session.add_all([category, client])
+        await session.flush()
 
-    session.add_all([category, client])
-    await session.flush()
+        order = Order(client_id=1)
+        product = Product(
+            title="Test Product 1", price=10.0, category_id=1, quantity=2
+        )
+        session.add_all([product, order])
+        await session.flush()
 
-    order = Order(client_id=1)
-    product = Product(
-        title="Test Product 1", price=10.0, category_id=1, quantity=2
-    )
-    session.add_all([product, order])
-    await session.flush()
-
-    await session.commit()
+        await session.commit()
 
 
 @pytest_asyncio.fixture(scope="session")

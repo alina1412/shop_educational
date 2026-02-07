@@ -1,6 +1,9 @@
 import logging
 
 import pytest
+import sqlalchemy
+
+from service.db_setup.models import OrderItem
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -12,7 +15,7 @@ async def test_statistic_handler(client):
     assert response.status_code == 200
 
 
-async def test_add_order_handler(prepare_product_and_order, client):
+async def test_add_to_order_handler(prepare_product_and_order, client):
     url = "/add-to-cart"
     order_id = 1
     product_id = 1
@@ -24,7 +27,10 @@ async def test_add_order_handler(prepare_product_and_order, client):
     assert response.status_code == 200
 
 
-async def test_add_order_handler_twice(prepare_product_and_order, client):
+async def test_add_to_order_handler_twice_not_enough(
+    prepare_product_and_order, client
+):
+    """Second time - there's not enough product in stock"""
     url = "/add-to-cart"
     order_id = 1
     product_id = 1
@@ -43,7 +49,52 @@ async def test_add_order_handler_twice(prepare_product_and_order, client):
     assert response.status_code == 400
 
 
-async def test_add_order_handler_not_enough_product(
+async def test_add_to_order_handler_twice_same_orderitem(
+    prepare_product_and_order, client, get_async_session
+):
+    url = "/add-to-cart"
+    order_id = 1
+    product_id = 1
+    quantity_1 = 1
+    quantity_2 = 1
+
+    session = get_async_session
+
+    async def get_order_item():
+        return (
+            await session.execute(
+                sqlalchemy.select(OrderItem).where(
+                    OrderItem.order_id == order_id,
+                    OrderItem.product_id == product_id,
+                )
+            )
+        ).scalar_one_or_none()
+
+    order_item = await get_order_item()
+    assert order_item is None
+    assert 1
+    response = await client.post(
+        url
+        + f"?order_id={order_id}&product_id={product_id}&quantity={quantity_1}"
+    )
+    assert response.status_code == 200
+
+    order_item = await get_order_item()
+    assert order_item.quantity == quantity_1
+    order_item_id = order_item.id
+
+    response = await client.post(
+        url
+        + f"?order_id={order_id}&product_id={product_id}&quantity={quantity_2}"
+    )
+    assert response.status_code == 200
+
+    await session.refresh(order_item)
+    assert order_item.quantity == quantity_1 + quantity_2
+    assert order_item.id == order_item_id
+
+
+async def test_add_to_order_handler_not_enough_product(
     prepare_product_and_order, client
 ):
     url = "/add-to-cart"
@@ -57,7 +108,7 @@ async def test_add_order_handler_not_enough_product(
     assert response.status_code == 400
 
 
-async def test_add_order_handler_422_1(client):
+async def test_add_to_order_handler_422_1(client):
     url = "/add-to-cart"
     order_id = 1
     product_id = 2
@@ -68,7 +119,7 @@ async def test_add_order_handler_422_1(client):
     assert response.status_code == 422
 
 
-async def test_add_order_handler_422_2(client):
+async def test_add_to_order_handler_422_2(client):
     url = "/add-to-cart"
     order_id = 1
     product_id = 2
@@ -79,7 +130,7 @@ async def test_add_order_handler_422_2(client):
     assert response.status_code == 422
 
 
-async def test_add_order_handler_422_3(client):
+async def test_add_to_order_handler_422_3(client):
     url = "/add-to-cart"
     order_id = 1
     product_id = 2
@@ -90,7 +141,7 @@ async def test_add_order_handler_422_3(client):
     assert response.status_code == 422
 
 
-async def test_add_order_handler_422_4(client):
+async def test_add_to_order_handler_422_4(client):
     url = "/add-to-cart"
     order_id = "a"
     product_id = 2
