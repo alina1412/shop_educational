@@ -1,23 +1,45 @@
 services:
   db:
     container_name: ${DB_NAME}
-    build: db/
-    image: db
-    env_file: .env
+    build:
+      context: .
+      dockerfile: db/Dockerfile
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - ${DB_PORT}:5432
+      - 5433:5432
+    command: >
+      postgres 
+      -c timezone=UTC 
+      -c log_timezone=UTC 
+      -c listen_addresses='*' 
+      
     healthcheck:
       test: ["CMD-SHELL", "sh -c 'pg_isready -U ${DB_USERNAME} -d ${DB_NAME}'"]
       interval: 10s
       timeout: 5s
-    # volumes:
-    #   - ./.database_data:/var/lib/postgresql/data
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
+  app:
+    container_name: app_shop
+    build: ./service
+    env_file: .env
+    environment:
+      - DB_HOST=db
+      - DB_NAME=${DB_NAME}
+      - DB_USERNAME=${DB_USERNAME}
+      - POSTGRES_PORT=5432
+      - DB_PASSWORD=${DB_PASSWORD}
+      - APP_PORT=${APP_PORT}
+    ports:
+      - ${APP_PORT}:${APP_PORT}
+    depends_on:
+      - db
 
-# volumes:
-#   .database_data:
-#     driver: local
+volumes:
+  postgres_data:
+    driver: local
+

@@ -31,7 +31,7 @@ test-all:
 	poetry run pytest -vsx --verbosity=2
 
 alembic-gen:
-	poetry run alembic -c alembic.ini revision --autogenerate -m "initial"
+	alembic revision -m "edit" --head schema@head
 
 alembic-up:
 	alembic -c alembic.ini upgrade schema@head 

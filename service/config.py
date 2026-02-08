@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DEBUG = environ.get("DEBUG", None)
+DEBUG = environ.get("DEBUG", None) == "True"
 
 db_settings = {
     "db_name": environ.get("DB_NAME"),
@@ -25,3 +25,5 @@ logging.basicConfig(
     datefmt=("%H:%M:%S" if DEBUG else "%Y-%m-%d %H:%M:%S"),
 )
 logger = logging.getLogger(__name__)
+
+logger.info(f"DB settings: {db_settings}")
