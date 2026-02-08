@@ -34,10 +34,13 @@ alembic-gen:
 	poetry run alembic -c alembic.ini revision --autogenerate -m "initial"
 
 alembic-up:
-	poetry run alembic -c alembic.ini upgrade head
+	alembic -c alembic.ini upgrade schema@head 
+
+alembic-data:
+	alembic -c alembic.ini upgrade data@head
 
 alembic-down:
-	poetry run alembic -c alembic.ini downgrade -1
+	alembic -c alembic.ini downgrade -1
 
 lint:
 	poetry run black service

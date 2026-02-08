@@ -35,8 +35,7 @@ def apply_migrations():
     downgrade(alembic_cfg, "base")
 
     # Apply all migrations
-    upgrade(alembic_cfg, "head")
-
+    upgrade(alembic_cfg, "schema@head")
     yield
     # Optional: cleanup after tests
     # downgrade(alembic_cfg, "base")
@@ -151,6 +150,7 @@ async def prepare_product_and_order(
 
 @pytest_asyncio.fixture(scope="session")
 async def prepare_subcategories(apply_migrations, get_async_session) -> None:
+    """If not to run alembic data migrations automatically"""
     session = get_async_session
 
     category0 = Category(title="Electronics")

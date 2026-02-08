@@ -3,8 +3,7 @@ from logging.config import fileConfig
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
-
+from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 
@@ -40,11 +39,6 @@ from service.db_setup.models import User, Base
 target_metadata = Base.metadata
 
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
-
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -70,35 +64,42 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+def run_migrations_online() -> None:
+    """Run migrations in 'online' mode.
 
-    with context.begin_transaction():
-        context.run_migrations()
-
-
-async def run_async_migrations() -> None:
-    """In this scenario we need to create an Engine
+    In this scenario we need to create an Engine
     and associate a connection with the context.
 
     """
 
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+    # this callback is used to prevent an auto-migration from being generated
+    # when there are no changes to the schema
+    # reference: http://alembic.zzzcomputing.com/en/latest/cookbook.html
+    def process_revision_directives(context, revision, directives):  # type: ignore
+        if getattr(config.cmd_opts, "autogenerate", False):
+            script = directives[0]
+            if script.upgrade_ops.is_empty():
+                directives[:] = []
+                # logger.info("No changes in schema detected.")
+
+    engine = engine_from_config(
+        config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
-
-    await connectable.dispose()
-
-
-def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
-
-    asyncio.run(run_async_migrations())
+    connection = engine.connect()
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        process_revision_directives=process_revision_directives,
+        compare_type=True,
+    )
+    try:
+        with context.begin_transaction():
+            context.run_migrations()
+    finally:
+        connection.close()
 
 
 if context.is_offline_mode():
