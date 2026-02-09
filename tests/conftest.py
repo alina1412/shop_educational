@@ -128,7 +128,6 @@ async def prepare_product_and_order(
 ) -> None:
     async with get_async_session_maker() as session:
         client = Client(
-            id=1,
             name="Test Client",
             email="test@example.com",
             address="Test Address",
