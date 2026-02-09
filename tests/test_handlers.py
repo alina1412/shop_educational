@@ -207,3 +207,16 @@ async def test_statistics_handler(prepare_orders_for_statistic, client):
             "total_quantity": 2,
         },
     ]
+
+
+async def test_statistics_empty_handler(apply_migrations, client):
+    response = await client.get("/statistic-order")
+    assert response.status_code == 200
+    data = response.json()
+    assert data == []
+
+
+async def test_create_order_handler(client, prepare_product_and_order):
+    url = "/create-order"
+    response = await client.post(f"{url}?client_id={1}")
+    assert response.status_code == 200

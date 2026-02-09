@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 import pytz
-from sqlalchemy import CTE, func, join, select
+from sqlalchemy import Integer, func, join, select, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -167,45 +167,56 @@ class StatisticAccessor(DbAccessor):
         return result.mappings().all()
 
     async def get_top_selling_products(self):
-        cte = (
+        MONTH_AGO = datetime.now(self.local_tz) - timedelta(days=30)
+        parent = aliased(Category, name="parent")
+
+        cte = select(
+            Category.id.label("child_id"),
+            Category.id.label("parent_id"),
+            Category.parent_id.label("immediate_parent_id"),
+            func.cast(0, Integer).label("level"),
+        ).cte(name="category_hierarchy", recursive=True)
+
+        recursive_part = (
             select(
-                Category.id.label("category_id"),
-                Category.title,
-                Category.parent_id,
+                cte.c.child_id.label("child_id"),
+                parent.id.label("parent_id"),
+                parent.parent_id.label("immediate_parent_id"),
+                (cte.c.level + 1).label("level"),
             )
-            .where(Category.parent_id.is_(None))
-            .cte(name="category_tree", recursive=True)
+            .select_from(cte)
+            .join(parent, cte.c.immediate_parent_id == parent.id)
+            .where(cte.c.immediate_parent_id.isnot(None))
         )
 
-        recursive_part = select(
-            Category.id, Category.title, Category.parent_id
-        ).join(cte, Category.parent_id == cte.c.category_id)
+        category_hierarchy = cte.union_all(recursive_part)
 
-        cte = cte.union_all(recursive_part)
-
-        parent = aliased(Category, name="parent")
+        cat_parent = aliased(Category, name="cat_parent")
 
         main_query = (
             select(
                 Product.title.label("product_title"),
-                parent.title.label("category_top_title"),
-                Category.title.label("category_title"),
+                cat_parent.title.label("top_parent_title"),
                 func.sum(OrderItem.quantity).label("total_quantity"),
             )
-            .join(Product, OrderItem.product_id == Product.id)
-            .join(Category, Product.category_id == Category.id)
-            .join(cte, Category.id == cte.c.category_id)
-            .outerjoin(
-                parent, cte.c.parent_id == parent.id
-            )  # even if no parent
+            .select_from(category_hierarchy)
+            .join(
+                Product, Product.category_id == category_hierarchy.c.child_id
+            )
+            .join(cat_parent, cat_parent.id == category_hierarchy.c.parent_id)
+            .join(OrderItem, OrderItem.product_id == Product.id)
             .join(Order, OrderItem.order_id == Order.id)
             .where(
-                Order.date >= datetime.now(self.local_tz) - timedelta(days=30)
+                category_hierarchy.c.immediate_parent_id.is_(None),
+                Order.date >= MONTH_AGO,
             )
-            .group_by(Product.title, parent.title, Category.title)
+            .group_by(
+                Product.title,
+                cat_parent.title,
+            )
             .order_by(func.sum(OrderItem.quantity).desc())
             .limit(5)
         )
 
-        result = (await self.session.execute(main_query)).fetchall()
+        result = (await self.session.execute(main_query)).mappings().all()
         return result

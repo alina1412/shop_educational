@@ -70,7 +70,7 @@ async def show_statistic(db: AsyncSession = Depends(get_session)):
     return [
         TopProducts(
             product_name=row.product_title,
-            category_name=row.category_top_title or row.category_title,
+            category_name=row.top_parent_title,
             total_quantity=row.total_quantity,
         )
         for row in result
