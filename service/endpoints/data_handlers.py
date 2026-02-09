@@ -10,7 +10,7 @@ from service.db_accessors import (
     StatisticAccessor,
 )
 from service.db_setup.db_settings import get_session
-from service.schemas import SubcategoryCount, TopProducts
+from service.schemas import ClientOrderSum, SubcategoryCount, TopProducts
 
 api_router = APIRouter()
 
@@ -21,7 +21,7 @@ api_router = APIRouter()
         status.HTTP_400_BAD_REQUEST: {"description": "Bad request"},
         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Bad request"},
     },
-    response_model=List[Tuple[str, float]],
+    response_model=List[ClientOrderSum],
 )
 async def show_client_orders_sum(db: AsyncSession = Depends(get_session)):
     """Покажет список [имя клиента, сумма стоимости товаров],
@@ -29,7 +29,10 @@ async def show_client_orders_sum(db: AsyncSession = Depends(get_session)):
     если у клиента нет заказов, то он не будет в списке.
     """
     result = await StatisticAccessor(db).get_client_orders_sum()
-    return result
+    return [
+        ClientOrderSum(name=row.name, total_sum=row.total_sum)
+        for row in result
+    ]
 
 
 @api_router.get(

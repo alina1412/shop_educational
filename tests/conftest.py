@@ -1,6 +1,6 @@
 import asyncio
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import AsyncGenerator
 
 import pytest
@@ -29,7 +29,7 @@ TEST_DB_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/test_db"
 
 @pytest.fixture(scope="session")
 def apply_migrations():
-    alembic_cfg = Config("alembic.ini")
+    alembic_cfg = Config("alembic_test.ini")
 
     # Clean downgrade to base
     downgrade(alembic_cfg, "base")
@@ -53,7 +53,7 @@ def apply_migrations():
 async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
     engine = create_async_engine(
         TEST_DB_URL,
-        echo=False,
+        echo=True,
         poolclass=None,
     )
     session_maker = async_sessionmaker(
@@ -71,7 +71,7 @@ async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
 async def get_async_session() -> AsyncSession | None:
     engine = create_async_engine(
         TEST_DB_URL,
-        echo=False,
+        echo=True,
         poolclass=None,
     )
     session_maker = async_sessionmaker(
@@ -89,7 +89,7 @@ async def get_async_session() -> AsyncSession | None:
 async def get_async_session_maker() -> async_sessionmaker[AsyncSession] | None:
     engine = create_async_engine(
         TEST_DB_URL,
-        echo=False,
+        echo=True,
         poolclass=None,
     )
     session_maker = async_sessionmaker(
@@ -203,16 +203,19 @@ async def prepare_orders_for_statistic(
     await session.flush()
 
     order = Order(client_id=client.id, date=datetime.now())
+    order_old = Order(
+        client_id=client.id, date=datetime.now() - timedelta(days=40)
+    )
     product1 = Product(
         title="SmartphoneX",
         price=10.0,
         category_id=smatrphone_category_id,
-        quantity=5,
+        quantity=50,
     )
     product2 = Product(
-        title="BookA", price=5.0, category_id=category_books_id, quantity=5
+        title="BookA", price=5.0, category_id=category_books_id, quantity=50
     )
-    session.add_all([product1, product2, order])
+    session.add_all([product1, product2, order, order_old])
     await session.flush()
 
     order_item1 = OrderItem(
@@ -227,5 +230,12 @@ async def prepare_orders_for_statistic(
         quantity=3,
         price_at_time=5.0,
     )
-    session.add_all([order_item1, order_item2])
+
+    order_item3 = OrderItem(
+        order_id=order_old.id,
+        product_id=product2.id,
+        quantity=30,
+        price_at_time=5.0,
+    )
+    session.add_all([order_item1, order_item2, order_item3])
     await session.commit()

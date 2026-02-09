@@ -9,10 +9,11 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-async def test_statistic_handler(client):
-    url = "statistic-order"
+async def test_client_order_sum_handler(prepare_orders_for_statistic, client):
+    url = "client-order-sum"
     response = await client.get(url)
     assert response.status_code == 200
+    assert response.json() == [{"name": "Test Client", "total_sum": 185.0}]
 
 
 async def test_add_to_order_handler(prepare_product_and_order, client):
