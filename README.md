@@ -1,4 +1,4 @@
-Educational shop project REST, fastapi
+### Educational shop project REST, fastapi
 
 ### Stack
 Fastapi, 
@@ -69,6 +69,8 @@ Product "1" -- "*" OrderItem : referenced in
 
 Проект MVP учебный. В более рабочих условиях рассматривается вариант использования ID не int, а uuid.
 Логика может предположить, когда Order может становиться из active в оплаченный - не активный.
+
+<img width="1461" height="804" alt="image" src="https://github.com/user-attachments/assets/eeeeb10d-63b9-4621-8070-8d3b00cb97f8" />
 
 ### Учебные задания
 
