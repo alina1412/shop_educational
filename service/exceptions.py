@@ -8,3 +8,7 @@ class OrderNotFound(Exception):
 
 class ProductNotAvailable(Exception):
     pass
+
+
+class ClientNotFound(Exception):
+    pass

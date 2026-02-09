@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from service.config import logger
 from service.db_accessors import (
+    OrderClientAccessor,
     OrderProductAccessor,
     StatisticAccessor,
 )
@@ -80,6 +81,9 @@ async def show_statistic(db: AsyncSession = Depends(get_session)):
     "/add-to-cart",
     responses={
         status.HTTP_400_BAD_REQUEST: {"description": "Bad request"},
+        status.HTTP_404_NOT_FOUND: {
+            "description": "Order or Product not found"
+        },
         status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Bad request"},
     },
 )
@@ -99,4 +103,22 @@ async def add_to_order_cart(
         order_id, product_id, quantity
     )
 
-    return {"data": "Success"}
+    return {"result": "success"}
+
+
+@api_router.post(
+    "/create-order",
+    responses={
+        status.HTTP_400_BAD_REQUEST: {"description": "Bad request"},
+        status.HTTP_404_NOT_FOUND: {"description": "Client not found"},
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {"description": "Bad request"},
+    },
+)
+async def create_order(
+    client_id: int = Query(..., gt=0),
+    session: AsyncSession = Depends(get_session),
+):
+    """Create new order for client"""
+    order_accessor = OrderClientAccessor(session)
+    order_id = await order_accessor.create_new_order(client_id)
+    return {"order_id": order_id}

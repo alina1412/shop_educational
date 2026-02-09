@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, status
 
 from service.exceptions import (
+    ClientNotFound,
     OrderNotFound,
     ProductNotAvailable,
     ProductNotFound,
@@ -28,5 +29,9 @@ def add_exception_handlers(app: FastAPI):
     @app.exception_handler(ProductNotAvailable)
     async def product_not_available_handler(request, exc):
         raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.exception_handler(ClientNotFound)
+    async def client_not_found_handler(request, exc):
+        raise HTTPException(status_code=404, detail=str(exc))
 
     return app
