@@ -22,21 +22,6 @@ from sqlalchemy.orm import (
 Base = declarative_base()
 
 
-class User(Base):
-    __tablename__ = "user"
-
-    id: Mapped[int] = mapped_column(
-        primary_key=True, autoincrement=True, index=True
-    )
-    username: Mapped[str] = mapped_column(
-        String(255), unique=True, nullable=False
-    )
-    password: Mapped[str] = mapped_column(String(255), nullable=False)
-    active: Mapped[int] = mapped_column(
-        Integer, nullable=False, server_default="1"
-    )
-
-
 class Category(Base):
     __tablename__ = "category"
 
@@ -73,7 +58,7 @@ class Client(Base):
         primary_key=True, autoincrement=True, index=True
     )
     name: Mapped[str] = mapped_column(String(40), nullable=False)
-    email: Mapped[str] = mapped_column(String(30), nullable=False)
+    email: Mapped[str] = mapped_column(String(30), nullable=False, unique=True)
     address: Mapped[str] = mapped_column(String(120), nullable=True)
 
 
@@ -90,6 +75,9 @@ class Order(Base):
         nullable=False,
         server_default=func.now(),
         index=True,
+    )
+    active: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="1"
     )
 
 

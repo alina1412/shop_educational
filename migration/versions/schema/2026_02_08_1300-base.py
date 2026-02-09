@@ -37,20 +37,15 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=40), nullable=False),
     sa.Column('email', sa.String(length=30), nullable=False),
     sa.Column('address', sa.String(length=120), nullable=True),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_table('user',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('username', sa.String(length=255), nullable=False),
-    sa.Column('password', sa.String(length=255), nullable=False),
-    sa.Column('active', sa.Integer(), server_default='1', nullable=False),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('username')
+    sa.UniqueConstraint('email')
     )
+
     op.create_table('order',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('client_id', sa.Integer(), nullable=False),
     sa.Column('date', sa.DateTime(timezone=True), server_default=sa.text("timezone('UTC', now())"), nullable=False),
+    sa.Column('active', sa.Integer(), server_default='1', nullable=False),
     sa.ForeignKeyConstraint(['client_id'], ['client.id'], ondelete='RESTRICT'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -81,7 +76,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_order_id'), 'order', ['id'], unique=False)
     op.create_index(op.f('ix_order_item_id'), 'order_item', ['id'], unique=False)
     op.create_index(op.f('ix_product_id'), 'product', ['id'], unique=False)
-    op.create_index(op.f('ix_user_id'), 'user', ['id'], unique=False)
+    
 
     op.create_unique_constraint('uq_order_product', 'order_item', ['order_id', 'product_id'])
     # ### end Alembic commands ###
@@ -95,7 +90,6 @@ def downgrade() -> None:
     
     op.drop_constraint('uq_order_product', 'order_item', type_='unique')
 
-    op.drop_index(op.f('ix_user_id'), table_name='user')
     op.drop_index(op.f('ix_product_id'), table_name='product')
     op.drop_index(op.f('ix_order_item_id'), table_name='order_item')
     op.drop_index(op.f('ix_order_id'), table_name='order')
@@ -104,7 +98,6 @@ def downgrade() -> None:
 
     op.drop_table('order_item')
     op.drop_table('order')
-    op.drop_table('user')
     op.drop_table('client')
     op.drop_table('product')
     op.drop_table('category')
