@@ -11,10 +11,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
 
-async def test_db_connect(apply_migrations, get_async_session):
-    manager = OrderClientAccessor(get_async_session)
+async def test_db_connect(apply_migrations, session):
+    manager = OrderClientAccessor(session)
     _ = await manager.get_client(1)
-    await get_async_session.aclose()
+    await session.aclose()
     logger.info("Database connection test passed")
 
 
@@ -28,7 +28,7 @@ def timer():
 
 
 async def test_run_sql(
-    apply_migrations, prepare_orders_for_statistic, get_async_session_maker
+    apply_migrations, prepare_orders_for_statistic, test_session_factory
 ):
 
     async def create_many_subcategories(session, num, parent_id=None):
@@ -38,7 +38,7 @@ async def test_run_sql(
         await session.flush()
         return category.id
 
-    async with get_async_session_maker() as session:
+    async with test_session_factory() as session:
         id_ = None
         for i in range(40):
             id_ = await create_many_subcategories(session, i, parent_id=id_)

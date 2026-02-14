@@ -9,14 +9,14 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-async def test_client_order_sum_handler(prepare_orders_for_statistic, client):
+async def test_client_order_sum_handler(client, prepare_orders_for_statistic):
     url = "client-order-sum"
     response = await client.get(url)
     assert response.status_code == 200
     assert response.json() == [{"name": "Test Client", "total_sum": 185.0}]
 
 
-async def test_add_to_order_handler(prepare_product_and_order, client):
+async def test_add_to_order_handler(client, prepare_product_and_order):
     url = "/add-to-cart"
     order_id = 1
     product_id = 1
@@ -29,7 +29,7 @@ async def test_add_to_order_handler(prepare_product_and_order, client):
 
 
 async def test_add_to_order_handler_twice_not_enough(
-    prepare_product_and_order, client
+    client, prepare_product_and_order
 ):
     """Second time - there's not enough product in stock"""
     url = "/add-to-cart"
@@ -51,15 +51,14 @@ async def test_add_to_order_handler_twice_not_enough(
 
 
 async def test_add_to_order_handler_twice_same_orderitem(
-    prepare_product_and_order, client, get_async_session
+    client, prepare_product_and_order, test_session_factory
 ):
     url = "/add-to-cart"
     order_id = 1
     product_id = 1
     quantity_1 = 1
     quantity_2 = 1
-
-    session = get_async_session
+    session = test_session_factory()
 
     async def get_order_item():
         return (
@@ -74,6 +73,7 @@ async def test_add_to_order_handler_twice_same_orderitem(
     order_item = await get_order_item()
     assert order_item is None
     assert 1
+
     response = await client.post(
         url
         + f"?order_id={order_id}&product_id={product_id}&quantity={quantity_1}"
@@ -94,9 +94,11 @@ async def test_add_to_order_handler_twice_same_orderitem(
     assert order_item.quantity == quantity_1 + quantity_2
     assert order_item.id == order_item_id
 
+    await session.close()
+
 
 async def test_add_to_order_handler_not_enough_product(
-    prepare_product_and_order, client
+    client, prepare_product_and_order
 ):
     url = "/add-to-cart"
     order_id = 1
@@ -109,48 +111,22 @@ async def test_add_to_order_handler_not_enough_product(
     assert response.status_code == 400
 
 
-async def test_add_to_order_handler_422_1(client):
+@pytest.mark.parametrize(
+    "params, description",
+    [
+        ({"product_id": 2, "quantity": 3}, "missing order_id"),
+        ({"order_id": 1, "quantity": 3}, "missing product_id"),
+        ({"order_id": 1, "product_id": 2}, "missing quantity"),
+        (
+            {"order_id": "a", "product_id": 2, "quantity": 3},
+            "invalid order_id type",
+        ),
+    ],
+)
+async def test_add_to_order_handler_422(client, params, description):
     url = "/add-to-cart"
-    order_id = 1
-    product_id = 2
-    quantity = 3
-    response = await client.post(
-        url + f"?product_id={product_id}&quantity={quantity}"
-    )
-    assert response.status_code == 422
-
-
-async def test_add_to_order_handler_422_2(client):
-    url = "/add-to-cart"
-    order_id = 1
-    product_id = 2
-    quantity = 3
-    response = await client.post(
-        url + f"?order_id={order_id}&quantity={quantity}"
-    )
-    assert response.status_code == 422
-
-
-async def test_add_to_order_handler_422_3(client):
-    url = "/add-to-cart"
-    order_id = 1
-    product_id = 2
-    quantity = 3
-    response = await client.post(
-        url + f"?order_id={order_id}&product_id={product_id}"
-    )
-    assert response.status_code == 422
-
-
-async def test_add_to_order_handler_422_4(client):
-    url = "/add-to-cart"
-    order_id = "a"
-    product_id = 2
-    quantity = 3
-    response = await client.post(
-        url
-        + f"?order_id={order_id}&product_id={product_id}&quantity={quantity}"
-    )
+    query_string = "&".join([f"{k}={v}" for k, v in params.items()])
+    response = await client.post(f"{url}?{query_string}")
     assert response.status_code == 422
 
 
@@ -176,7 +152,7 @@ async def test_add_to_cart_order_not_found(client):
     assert response.status_code == 404
 
 
-async def test_count_subcategories_handler(prepare_subcategories, client):
+async def test_count_subcategories_handler(client, prepare_subcategories):
     response = await client.get("/count-subcategories")
     assert response.status_code == 200
     data = response.json()
@@ -191,7 +167,7 @@ async def test_count_subcategories_handler(prepare_subcategories, client):
     ]
 
 
-async def test_statistics_handler(prepare_orders_for_statistic, client):
+async def test_statistics_handler(client, prepare_orders_for_statistic):
     response = await client.get("/statistic-order")
     assert response.status_code == 200
     data = response.json()
