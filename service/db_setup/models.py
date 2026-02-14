@@ -32,7 +32,7 @@ class Category(Base):
     parent_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("category.id", ondelete="SET NULL"),
         nullable=True,
-        server_default="null",
+        server_default=None,
     )
     # children = relationship("Category", back_populates="parent", foreign_keys=[parent_id])
     # parent = relationship("Category", back_populates="children", remote_side=[id])
