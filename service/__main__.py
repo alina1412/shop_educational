@@ -1,10 +1,24 @@
+from contextlib import asynccontextmanager
+
 import uvicorn
 from fastapi import FastAPI
 
+from service.config import logger
+from service.db_setup.db_settings import db_connector
 from service.endpoints.data_handlers import api_router as data_routes
 from service.http_exceptions import add_exception_handlers
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting up...")
+    yield
+    logger.warning("Shutting down...")
+    await db_connector.dispose_engine()
+
+
+app = FastAPI(lifespan=lifespan)
+
 app = add_exception_handlers(app)
 
 app.include_router(data_routes)

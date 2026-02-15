@@ -13,6 +13,7 @@ from service.config import db_settings, logger
 class DbConnector:
     def __init__(self) -> None:
         self.engine: AsyncEngine | None = None
+        self._session_maker: async_sessionmaker | None = None
 
     @property
     def uri(self) -> str:
@@ -46,18 +47,25 @@ class DbConnector:
             expire_on_commit=False,
         )
 
+    async def dispose_engine(self):
+        """Dispose engine when application shuts down"""
+        if self.engine:
+            await self.engine.dispose()
+            self.engine = None
+            self._session_maker = None
+
+
+db_connector = DbConnector()
+
 
 async def get_session() -> AsyncGenerator:
-    db_connector = DbConnector()
-    async with db_connector.session_maker() as session:
-        try:
-            yield session
-        except Exception as exc:
-            logger.error("Error : ", exc_info=exc)
-            await session.rollback()
-            raise exc
-        finally:
-            await session.close()
-            logger.info("closing db session")
-            if db_connector.engine:
-                await db_connector.engine.dispose()
+    session = db_connector.session_maker()
+    try:
+        yield session
+        await session.commit()
+    except Exception as exc:
+        logger.error("Error in session", exc_info=exc)
+        await session.rollback()
+        raise exc
+    finally:
+        await session.close()
